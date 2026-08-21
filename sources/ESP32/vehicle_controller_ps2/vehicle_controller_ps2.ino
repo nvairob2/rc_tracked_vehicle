@@ -30,8 +30,10 @@
 
 const int BASE_SPEED_STEP = 10;
 const int STICK_DEADZONE = 12;
+const int PIVOT_SPEED_MIN = 80;
 const unsigned long GAMEPAD_POLL_MS = 20;
 const unsigned long GAMEPAD_RETRY_MS = 2000;
+const unsigned long SPEED_HOLD_MS = 80;
 
 PS2X ps2x;
 int baseSpeed = 0;  // −255…255, задний ход через ↓
@@ -39,6 +41,7 @@ bool gamepadOk = false;
 byte lastPs2InitErr = 255;
 unsigned long lastGamepadPoll = 0;
 unsigned long lastGamepadRetry = 0;
+unsigned long lastHoldIncMs = 0;
 int lastSentMove = 0;
 int lastSentTurn = 0;
 int lastReadOk = 0;
@@ -126,17 +129,36 @@ int centerStick(uint8_t raw) {
   return raw;
 }
 
-// Стик: вперёд → +255, центр → baseSpeed (−255…255), назад → −255.
+// Стик не даёт реверс: против хода только торможение до 0.
+// base > 0: вперёд → +255, назад → 0.
+// base < 0: назад → −255, вперёд → 0.
+// base == 0: стики не трогают скорость (разгон — крестик / L1/R1).
 int mapStickY(int stickVal, int base) {
   stickVal = centerStick((uint8_t)stickVal);
   base = constrain(base, -255, 255);
-  if (stickVal < 128) {
-    return base + (255 - base) * (128 - stickVal) / 128;
+  if (base > 0) {
+    if (stickVal < 128) {
+      return base + (255 - base) * (128 - stickVal) / 128;
+    }
+    if (stickVal > 128) {
+      return base * (255 - stickVal) / 127;
+    }
+    return base;
   }
-  if (stickVal > 128) {
-    return base + (-255 - base) * (stickVal - 128) / 127;
+  if (base < 0) {
+    if (stickVal > 128) {
+      return base + (-255 - base) * (stickVal - 128) / 127;
+    }
+    if (stickVal < 128) {
+      return base * stickVal / 128;
+    }
+    return base;
   }
-  return base;
+  return 0;
+}
+
+void bumpBaseSpeed(int delta) {
+  baseSpeed = constrain(baseSpeed + delta, -255, 255);
 }
 
 void pollGamepad() {
@@ -145,11 +167,30 @@ void pollGamepad() {
     return;
   }
 
+  unsigned long now = millis();
+
+  if (ps2x.ButtonPressed(PSB_L2) || ps2x.ButtonPressed(PSB_R2)) {
+    baseSpeed = 0;
+  }
+
   if (ps2x.ButtonPressed(PSB_PAD_UP) || ps2x.ButtonPressed(PSB_TRIANGLE)) {
-    baseSpeed = min(255, baseSpeed + BASE_SPEED_STEP);
+    bumpBaseSpeed(BASE_SPEED_STEP);
   }
   if (ps2x.ButtonPressed(PSB_PAD_DOWN) || ps2x.ButtonPressed(PSB_CROSS)) {
-    baseSpeed = max(-255, baseSpeed - BASE_SPEED_STEP);
+    bumpBaseSpeed(-BASE_SPEED_STEP);
+  }
+
+  if (ps2x.Button(PSB_L1) || ps2x.Button(PSB_R1)) {
+    if (now - lastHoldIncMs >= SPEED_HOLD_MS) {
+      lastHoldIncMs = now;
+      if (baseSpeed >= 0) {
+        bumpBaseSpeed(BASE_SPEED_STEP);
+      } else {
+        bumpBaseSpeed(-BASE_SPEED_STEP);
+      }
+    }
+  } else {
+    lastHoldIncMs = 0;
   }
 
   int ly = centerStick(ps2x.Analog(PSS_LY));
@@ -157,17 +198,23 @@ void pollGamepad() {
 
   int leftCmd;
   int rightCmd;
+  int move;
+  int turn;
 
-  if (ps2x.Button(PSB_L2) || ps2x.Button(PSB_R2)) {
-    leftCmd = 0;
-    rightCmd = 0;
+  bool padLeft = ps2x.Button(PSB_PAD_LEFT);
+  bool padRight = ps2x.Button(PSB_PAD_RIGHT);
+  if (padLeft != padRight) {
+    int pivot = max(abs(baseSpeed), PIVOT_SPEED_MIN);
+    move = 0;
+    turn = padRight ? pivot : -pivot;
+    leftCmd = move + turn;
+    rightCmd = move - turn;
   } else {
     leftCmd = constrain(mapStickY(ly, baseSpeed), -255, 255);
     rightCmd = constrain(mapStickY(ry, baseSpeed), -255, 255);
+    move = (leftCmd + rightCmd) / 2;
+    turn = (leftCmd - rightCmd) / 2;
   }
-
-  int move = (leftCmd + rightCmd) / 2;
-  int turn = (leftCmd - rightCmd) / 2;
 
   bool changed = (move != lastSentMove) || (turn != lastSentTurn);
   if (changed) {
@@ -176,12 +223,12 @@ void pollGamepad() {
 
   uint16_t buttons = ps2x.ButtonDataByte();
   if (baseSpeed != lastLogBase || ly != lastLogLY || ry != lastLogRY || buttons != lastLogButtons) {
-    LOG.printf("GP base=%d LY=%d RY=%d L=%d R=%d UP=%d DN=%d L2=%d R2=%d\n",
+    LOG.printf("GP base=%d LY=%d RY=%d L=%d R=%d UP=%d DN=%d L1=%d L2=%d\n",
                baseSpeed, ly, ry, leftCmd, rightCmd,
                ps2x.Button(PSB_PAD_UP) ? 1 : 0,
                ps2x.Button(PSB_PAD_DOWN) ? 1 : 0,
-               ps2x.Button(PSB_L2) ? 1 : 0,
-               ps2x.Button(PSB_R2) ? 1 : 0);
+               ps2x.Button(PSB_L1) ? 1 : 0,
+               ps2x.Button(PSB_L2) ? 1 : 0);
     lastLogBase = baseSpeed;
     lastLogLY = ly;
     lastLogRY = ry;
