@@ -52,7 +52,7 @@ const float INTEGRAL_MAX = 40.0f;   // anti-windup интегратора
 const int CORRECTION_MAX = 40;      // потолок trim, чтобы не ломать open-loop базу
 const int SPEED_CLAMP = 200;        // отсечка мусорных дельт энкодера
 const int CMD_DEADZONE = 5;         // ниже — считаем «стоп»
-const int MIN_TICKS_FOR_LOOP = 3;   // меньше — энкодер «молчит», trim=0
+const int MIN_TICKS_FOR_LOOP = 0;   // 0: PI и на малых оборотах (1–2 тика / 20 мс)
 
 // =============================================================================
 // Ток BTS7960B (IS)
@@ -111,6 +111,9 @@ int32_t lastPos2 = 0;
 unsigned long lastControlMs = 0;
 float integral1 = 0.0f;
 float integral2 = 0.0f;
+float speedEma1 = 0.0f;
+float speedEma2 = 0.0f;
+const float SPEED_EMA_ALPHA = 0.35f;  // сглаживание тиков — меньше квантования на малой скорости
 
 float currentEma1 = 0.0f;  // сглаженный ток борта 1, А
 float currentEma2 = 0.0f;
@@ -156,6 +159,8 @@ void setMotorPWM(int rpwm_pin, int lpwm_pin, int pwm_value) {
 void stopMotors() {
   integral1 = 0.0f;
   integral2 = 0.0f;
+  speedEma1 = 0.0f;
+  speedEma2 = 0.0f;
   setMotorPWM(RPWM_1, LPWM_1, 0);
   setMotorPWM(RPWM_2, LPWM_2, 0);
 }
@@ -170,17 +175,19 @@ int32_t readSpeed(volatile int32_t &ticks, int32_t &lastPos) {
 }
 
 // Ошибка и измерение — в тиках; к cmd добавляется только ограниченный trim.
-int speedTrim(int cmd, int32_t measuredTicks, float &integral) {
+// На малой скорости энкодер даёт 0–2 тика за 20 мс — это не «молчание», а реальное
+// измерение; trim должен работать, иначе борта разъезжаются.
+int speedTrim(int cmd, float measuredTicks, float &integral) {
   if (abs(cmd) <= CMD_DEADZONE) {
     integral = 0.0f;
     return 0;
   }
-  if (abs(measuredTicks) < MIN_TICKS_FOR_LOOP) {
+  if (MIN_TICKS_FOR_LOOP > 0 && abs(measuredTicks) < (float)MIN_TICKS_FOR_LOOP) {
     integral *= 0.5f;
     return 0;
   }
 
-  float error = (float)cmd * CMD_TO_TICKS - (float)measuredTicks;
+  float error = (float)cmd * CMD_TO_TICKS - measuredTicks;
   integral = constrain(integral + error, -INTEGRAL_MAX, INTEGRAL_MAX);
   return constrain((int)(Kp * error + Ki * integral), -CORRECTION_MAX, CORRECTION_MAX);
 }
@@ -320,12 +327,14 @@ void loop() {
 
   int32_t speed1 = readSpeed(encTicks1, lastPos1);
   int32_t speed2 = readSpeed(encTicks2, lastPos2);
+  speedEma1 += SPEED_EMA_ALPHA * ((float)speed1 - speedEma1);
+  speedEma2 += SPEED_EMA_ALPHA * ((float)speed2 - speedEma2);
 
   int pwm1 = cmd1;
   int pwm2 = cmd2;
   if (SPEED_CLOSED_LOOP) {
-    pwm1 = constrain(cmd1 + speedTrim(cmd1, speed1, integral1), -255, 255);
-    pwm2 = constrain(cmd2 + speedTrim(cmd2, speed2, integral2), -255, 255);
+    pwm1 = constrain(cmd1 + speedTrim(cmd1, speedEma1, integral1), -255, 255);
+    pwm2 = constrain(cmd2 + speedTrim(cmd2, speedEma2, integral2), -255, 255);
   }
 
   pwm1 = applyCurrentLimit(pwm1, currentEma1);
