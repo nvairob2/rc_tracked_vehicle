@@ -28,20 +28,27 @@
 #define PS2_ATT  6
 #define PS2_DATA 4
 
+// --- Тонкая настройка геймпада ---
+// Шаг крейсерской скорости (крестик ↑/↓ разово, L1/R1 — пока держишь).
 const int BASE_SPEED_STEP = 10;
+// Мёртвая зона стика вокруг центра (128). Больше — спокойнее, меньше — чувствительнее.
 const int STICK_DEADZONE = 12;
+// Минимальный ШИМ разворота на месте, если |baseSpeed| меньше этого.
 const int PIVOT_SPEED_MIN = 80;
+// Как часто опрашивать приёмник PS2.
 const unsigned long GAMEPAD_POLL_MS = 20;
+// Повтор init, если dongle не ответил при старте.
 const unsigned long GAMEPAD_RETRY_MS = 2000;
+// Период шага L1/R1 при удержании. 80 мс × шаг 10 ≈ 0→255 за ~2 с.
 const unsigned long SPEED_HOLD_MS = 80;
 
 PS2X ps2x;
-int baseSpeed = 0;  // −255…255, задний ход через ↓
+int baseSpeed = 0;  // крейсер −255…255; 0 = «круиза нет», стики сами задают борта
 bool gamepadOk = false;
 byte lastPs2InitErr = 255;
 unsigned long lastGamepadPoll = 0;
 unsigned long lastGamepadRetry = 0;
-unsigned long lastHoldIncMs = 0;
+unsigned long lastHoldStepMs = 0;
 int lastSentMove = 0;
 int lastSentTurn = 0;
 int lastReadOk = 0;
@@ -129,13 +136,25 @@ int centerStick(uint8_t raw) {
   return raw;
 }
 
-// Стик не даёт реверс: против хода только торможение до 0.
-// base > 0: вперёд → +255, назад → 0.
-// base < 0: назад → −255, вперёд → 0.
-// base == 0: стики не трогают скорость (разгон — крестик / L1/R1).
-int mapStickY(int stickVal, int base) {
+void bumpBaseSpeed(int delta) {
+  baseSpeed = constrain(baseSpeed + delta, -255, 255);
+}
+
+// PS2X: 0 = стик вперёд, 128 = центр, 255 = назад.
+int stickToTrackDirect(int stickVal) {
   stickVal = centerStick((uint8_t)stickVal);
-  base = constrain(base, -255, 255);
+  if (stickVal < 128) {
+    return (128 - stickVal) * 255 / 128;
+  }
+  if (stickVal > 128) {
+    return -(stickVal - 128) * 255 / 127;
+  }
+  return 0;
+}
+
+// Крейсер задан: вдоль хода можно добавить до max, против хода — только до 0 (без реверса).
+int stickToTrackCruise(int stickVal, int base) {
+  stickVal = centerStick((uint8_t)stickVal);
   if (base > 0) {
     if (stickVal < 128) {
       return base + (255 - base) * (128 - stickVal) / 128;
@@ -145,20 +164,21 @@ int mapStickY(int stickVal, int base) {
     }
     return base;
   }
-  if (base < 0) {
-    if (stickVal > 128) {
-      return base + (-255 - base) * (stickVal - 128) / 127;
-    }
-    if (stickVal < 128) {
-      return base * stickVal / 128;
-    }
-    return base;
+  if (stickVal > 128) {
+    return base + (-255 - base) * (stickVal - 128) / 127;
   }
-  return 0;
+  if (stickVal < 128) {
+    return base * stickVal / 128;
+  }
+  return base;
 }
 
-void bumpBaseSpeed(int delta) {
-  baseSpeed = constrain(baseSpeed + delta, -255, 255);
+int mapStickY(int stickVal, int base) {
+  base = constrain(base, -255, 255);
+  if (base == 0) {
+    return stickToTrackDirect(stickVal);
+  }
+  return stickToTrackCruise(stickVal, base);
 }
 
 void pollGamepad() {
@@ -169,6 +189,8 @@ void pollGamepad() {
 
   unsigned long now = millis();
 
+  // L2/R2 (указательные): защёлка стоп круиза. Если стики не в центре и base==0,
+  // борта сразу возьмут положение стиков — для полного стопа центрируй стики.
   if (ps2x.ButtonPressed(PSB_L2) || ps2x.ButtonPressed(PSB_R2)) {
     baseSpeed = 0;
   }
@@ -180,17 +202,16 @@ void pollGamepad() {
     bumpBaseSpeed(-BASE_SPEED_STEP);
   }
 
-  if (ps2x.Button(PSB_L1) || ps2x.Button(PSB_R1)) {
-    if (now - lastHoldIncMs >= SPEED_HOLD_MS) {
-      lastHoldIncMs = now;
-      if (baseSpeed >= 0) {
-        bumpBaseSpeed(BASE_SPEED_STEP);
-      } else {
-        bumpBaseSpeed(-BASE_SPEED_STEP);
-      }
+  // L1 — газ (пока держишь +), R1 — тормоз/назад (пока держишь −). Оба сразу — ничего.
+  bool l1 = ps2x.Button(PSB_L1);
+  bool r1 = ps2x.Button(PSB_R1);
+  if (l1 != r1) {
+    if (now - lastHoldStepMs >= SPEED_HOLD_MS) {
+      lastHoldStepMs = now;
+      bumpBaseSpeed(l1 ? BASE_SPEED_STEP : -BASE_SPEED_STEP);
     }
   } else {
-    lastHoldIncMs = 0;
+    lastHoldStepMs = 0;
   }
 
   int ly = centerStick(ps2x.Analog(PSS_LY));
@@ -216,18 +237,18 @@ void pollGamepad() {
     turn = (leftCmd - rightCmd) / 2;
   }
 
-  bool changed = (move != lastSentMove) || (turn != lastSentTurn);
-  if (changed) {
+  if ((move != lastSentMove) || (turn != lastSentTurn)) {
     sendMotorCmd(move, turn, "GP");
   }
 
   uint16_t buttons = ps2x.ButtonDataByte();
   if (baseSpeed != lastLogBase || ly != lastLogLY || ry != lastLogRY || buttons != lastLogButtons) {
-    LOG.printf("GP base=%d LY=%d RY=%d L=%d R=%d UP=%d DN=%d L1=%d L2=%d\n",
+    LOG.printf("GP base=%d LY=%d RY=%d L=%d R=%d UP=%d DN=%d L1=%d R1=%d L2=%d\n",
                baseSpeed, ly, ry, leftCmd, rightCmd,
                ps2x.Button(PSB_PAD_UP) ? 1 : 0,
                ps2x.Button(PSB_PAD_DOWN) ? 1 : 0,
-               ps2x.Button(PSB_L1) ? 1 : 0,
+               l1 ? 1 : 0,
+               r1 ? 1 : 0,
                ps2x.Button(PSB_L2) ? 1 : 0);
     lastLogBase = baseSpeed;
     lastLogLY = ly;
