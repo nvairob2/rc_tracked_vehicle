@@ -18,8 +18,17 @@
 #include <uxr/client/transport.h>
 #include "PS2X_lib.h"
 
+// Логи только в USB CDC, не в Serial1 (GPIO43/44 → STM32).
+// Ядро 2.x / Hardware CDC: USBSerial. Ядро 3.x TinyUSB: USBSerial нет.
 #if ARDUINO_USB_CDC_ON_BOOT
 #define LOG Serial
+#elif defined(ARDUINO_USB_MODE) && (ARDUINO_USB_MODE == 0)
+struct LogSink {
+  void begin(unsigned long) {}
+  void println(const char*) {}
+  void printf(const char*, ...) {}
+};
+static LogSink LOG;
 #else
 #define LOG USBSerial
 #endif
@@ -46,6 +55,9 @@ const unsigned long GAMEPAD_POLL_MS = 20;
 const unsigned long GAMEPAD_RETRY_MS = 2000;
 const unsigned long SPEED_HOLD_MS = 80;
 const unsigned long CMD_VEL_TIMEOUT_MS = 200;
+const unsigned long UROS_PING_PERIOD_MS = 1000;
+const int UROS_PING_TIMEOUT_MS = 20;
+const int UROS_UDP_READ_CAP_MS = 20;
 
 // Select: Direct (микшер здесь) ↔ ROS2 (только /joy, UART из /cmd_vel)
 enum ControlMode { MODE_DIRECT = 0, MODE_ROS2 = 1 };
@@ -98,6 +110,7 @@ float webTurn = 0.0f;
 int rosMove = 0;
 int rosTurn = 0;
 unsigned long lastCmdVelMs = 0;
+unsigned long lastUrosPingMs = 0;
 bool haveCmdVel = false;
 
 WebServer server(80);
@@ -334,13 +347,15 @@ size_t udpWrite(uxrCustomTransport* /*t*/, const uint8_t* buf, size_t len, uint8
 }
 
 size_t udpRead(uxrCustomTransport* /*t*/, uint8_t* buf, size_t len, int timeout, uint8_t* err) {
+  if (timeout < 0) timeout = 0;
+  if (timeout > UROS_UDP_READ_CAP_MS) timeout = UROS_UDP_READ_CAP_MS;
   uint32_t start = millis();
   while (urosUdp.parsePacket() <= 0) {
-    if ((millis() - start) > (uint32_t)timeout) {
+    if ((millis() - start) >= (uint32_t)timeout) {
       *err = 1;
       return 0;
     }
-    delay(1);
+    yield();
   }
   int n = urosUdp.read(buf, len);
   *err = 0;
@@ -408,8 +423,11 @@ void destroyUrosEntities() {
 }
 
 void spinUros() {
+  unsigned long now = millis();
   if (urosState == UROS_WAIT) {
-    if (rmw_uros_ping_agent(200, 1) == RMW_RET_OK) {
+    if (now - lastUrosPingMs < UROS_PING_PERIOD_MS) return;
+    lastUrosPingMs = now;
+    if (rmw_uros_ping_agent(UROS_PING_TIMEOUT_MS, 1) == RMW_RET_OK) {
       urosState = UROS_CREATE;
       LOG.println("micro-ROS: agent ping OK");
     }
@@ -426,10 +444,13 @@ void spinUros() {
     }
     return;
   }
-  rclc_executor_spin_some(&executor, RCL_MS_TO_NS(5));
-  if (rmw_uros_ping_agent(50, 1) != RMW_RET_OK) {
-    LOG.println("micro-ROS: agent lost");
-    destroyUrosEntities();
+  rclc_executor_spin_some(&executor, RCL_MS_TO_NS(2));
+  if (now - lastUrosPingMs >= UROS_PING_PERIOD_MS) {
+    lastUrosPingMs = now;
+    if (rmw_uros_ping_agent(UROS_PING_TIMEOUT_MS, 1) != RMW_RET_OK) {
+      LOG.println("micro-ROS: agent lost");
+      destroyUrosEntities();
+    }
   }
 }
 
@@ -582,7 +603,6 @@ void setup() {
 
 void loop() {
   server.handleClient();
-  spinUros();
 
   PadState now;
   portENTER_CRITICAL(&padMux);
@@ -590,7 +610,10 @@ void loop() {
   portEXIT_CRITICAL(&padMux);
 
   applyModeAndDrive(now, padPrev);
-  publishRos(now);
+  // Direct: не пинговать agent — иначе loop стоит сотни мс без opi5.
+  if (controlMode == MODE_ROS2) {
+    spinUros();
+    publishRos(now);
+  }
   padPrev = now;
-  delay(5);
 }
