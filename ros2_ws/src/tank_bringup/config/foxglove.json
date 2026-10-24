@@ -1,0 +1,39 @@
+{
+  "configById": {
+    "3D!a": {
+      "layers": {},
+      "cameraState": {
+        "distance": 6,
+        "perspective": true,
+        "phi": 1.0,
+        "thetaOffset": 0
+      }
+    },
+    "RawMessages!joy": {
+      "topicName": "/joy"
+    },
+    "RawMessages!cmd": {
+      "topicName": "/cmd_vel"
+    },
+    "RawMessages!mode": {
+      "topicName": "/tank/mode"
+    },
+    "RawMessages!fb": {
+      "topicName": "/tank/feedback"
+    }
+  },
+  "globalVariables": {},
+  "layout": {
+    "direction": "row",
+    "first": {
+      "direction": "column",
+      "first": "RawMessages!joy",
+      "second": "RawMessages!cmd"
+    },
+    "second": {
+      "direction": "column",
+      "first": "RawMessages!mode",
+      "second": "RawMessages!fb"
+    }
+  }
+}
