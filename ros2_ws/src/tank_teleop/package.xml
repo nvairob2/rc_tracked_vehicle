@@ -4,7 +4,7 @@
   <name>tank_teleop</name>
   <version>1.0.0</version>
   <description>Микшер PS2-геймпада → /cmd_vel для гусеничной платформы.</description>
-  <maintainer email="nik@local">nik</maintainer>
+  <maintainer email="nik@orangepi5ultra.local">nik</maintainer>
   <license>Apache-2.0</license>
 
   <depend>rclpy</depend>

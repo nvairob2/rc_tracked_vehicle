@@ -13,7 +13,7 @@ setup(
     install_requires=['setuptools'],
     zip_safe=True,
     maintainer='nik',
-    maintainer_email='nik@local',
+    maintainer_email='nik@orangepi5ultra.local',
     description='Микшер PS2-геймпада → /cmd_vel',
     license='Apache-2.0',
     tests_require=['pytest'],

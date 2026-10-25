@@ -4,11 +4,11 @@
 
 ## 0. Подготовка
 
-- [ ] ESP32: библиотека `micro_ros_arduino`, скетч из папки `vehicle_controller_ros2`.
-- [ ] opi5 в Wi‑Fi `HeavyTank_10KG`, IP **192.168.4.2**.
-- [ ] `colcon build` в `ros2_ws`, `source install/setup.bash`.
-- [ ] `ros2 launch tank_bringup teleop.launch.py` (или agent отдельно + `start_agent:=false`).
-- [ ] Serial ESP32 115200: `Wi-Fi AP 192.168.4.1`.
+- [ ] ESP32: `vehicle_controller_ros2`, USB CDC On Boot Enabled (прошивка с Mac по USB — по желанию).
+- [ ] opi5: Ethernet в домашний LAN (SSH), wlan0 → `HeavyTank_10KG`, IP **192.168.4.2**, default **не** через танк (`schema/ros2_stage1.md` §2).
+- [ ] `ping 192.168.4.1` с Pi проходит.
+- [ ] `systemctl --user start tank-bringup` → `status` active.
+- [ ] `ros2 node list`: есть `/tank_teleop`. `/esp32_tank` — после Select.
 
 ## 1. Direct (по умолчанию)
 

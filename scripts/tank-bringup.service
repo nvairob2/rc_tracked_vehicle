@@ -1,0 +1,14 @@
+[Unit]
+Description=Tank ROS2 stage 1 (micro-ROS agent + tank_teleop)
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/nik/WORK/Projects/rc_tracked_vehicle/ros2_ws
+Environment=HOME=/home/nik
+ExecStart=/bin/bash -lc "source /opt/ros/humble/setup.bash && source /home/nik/WORK/Projects/rc_tracked_vehicle/ros2_ws/install/setup.bash && exec ros2 launch tank_bringup teleop.launch.py"
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

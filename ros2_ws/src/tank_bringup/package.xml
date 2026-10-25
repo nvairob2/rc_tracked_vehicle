@@ -4,7 +4,7 @@
   <name>tank_bringup</name>
   <version>1.0.0</version>
   <description>Launch: micro-ros-agent + tank_teleop.</description>
-  <maintainer email="nik@local">nik</maintainer>
+  <maintainer email="nik@orangepi5ultra.local">nik</maintainer>
   <license>Apache-2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
