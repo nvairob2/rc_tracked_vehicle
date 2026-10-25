@@ -39,10 +39,16 @@ ros2 launch tank_bringup teleop.launch.py
 
 ## Две сети
 
-Ethernet — домашний LAN (SSH `192.168.1.160`).  
-wlan0 — AP `HeavyTank_10KG`, IP **`192.168.4.2`**, **без** default route через танк.
+Ethernet — домашний LAN (SSH `192.168.1.160`), скрипт его не трогает.  
+wlan0 — либо AP танка, либо домашний Wi‑Fi:
 
-Команды: раздел «Две сети на opi5» в `schema/ros2_stage1.md`.
+```bash
+./scripts/opi5_net.sh tank     # 192.168.4.2, без default через ESP32
+./scripts/opi5_net.sh home     # обратно на Cudy (или последний домашний SSID)
+./scripts/opi5_net.sh status
+```
+
+Подробности: `schema/ros2_stage1.md` §2.
 
 ## Сборка и выкладка с Mac
 

@@ -52,25 +52,17 @@ ESP32 раздаёт DHCP и часто ставит себя шлюзом `192.
 
 Правило: в сети танка только префикс `192.168.4.0/24`, шлюз по умолчанию — домашний роутер.
 
-### Настройка NetworkManager (один раз, без sudo если сессия пользователя уже управляет NM)
+### Команды (Ethernet не трогают)
+
+С Mac или на Pi:
 
 ```bash
-# Найти AP (танк должен быть включён)
-nmcli dev wifi rescan
-nmcli -f SSID,SIGNAL,SECURITY dev wifi list | grep Heavy
-
-# Подключиться (пароль AP — см. таблицу ниже)
-nmcli device wifi connect "HeavyTank_10KG" password "password123" ifname wlan0
-
-# Зафиксировать IP и запретить default через танк
-# UUID смотреть: nmcli -t -f NAME,UUID,DEVICE con show --active
-nmcli con modify HeavyTank_10KG \
-  ipv4.method manual \
-  ipv4.addresses 192.168.4.2/24 \
-  ipv4.gateway "" \
-  ipv4.never-default yes
-nmcli con up HeavyTank_10KG
+./scripts/opi5_net.sh tank     # wlan0 → HeavyTank_10KG, 192.168.4.2, без default через танк
+./scripts/opi5_net.sh home     # wlan0 обратно на домашний Wi‑Fi (DHCP)
+./scripts/opi5_net.sh status
 ```
+
+`home` поднимает профиль, который был на wlan0 до `tank` (файл `~/.config/rc_tracked_vehicle/home-wifi`, по умолчанию `Cudy-0C20-5G`). У AP танка после `home` выключается autoconnect, чтобы он не перехватывал Wi‑Fi, пока танк включён.
 
 Проверка:
 
