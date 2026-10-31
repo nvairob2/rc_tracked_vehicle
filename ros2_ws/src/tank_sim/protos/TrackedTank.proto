@@ -1,6 +1,7 @@
 #VRML_SIM R2025a utf8
 # Гусеничная аппроксимация + Lidar D500.
-# ENU: X вперёд, Y влево, Z вверх (Webots R2025a).
+# Мир ENU, робот FLU: X вперёд, Y влево, Z вверх.
+# Cylinder в R2022a+ вдоль локального Z.
 
 PROTO TrackedTank [
   field SFVec3f    translation  0 0 0.05
@@ -28,7 +29,7 @@ PROTO TrackedTank [
           size 0.40 0.28 0.12
         }
       }
-      # Левое колесо: Cylinder по Y = ось колеса (влево)
+      # Левое колесо: ось шарнира Y; Cylinder (Z) → Y через +90° вокруг X
       HingeJoint {
         jointParameters HingeJointParameters {
           axis 0 1 0
@@ -46,6 +47,7 @@ PROTO TrackedTank [
         ]
         endPoint Solid {
           translation 0 0.165 0
+          rotation 1 0 0 1.5708
           children [
             Shape {
               appearance PBRAppearance { baseColor 0.05 0.05 0.05 roughness 1 }
@@ -75,6 +77,7 @@ PROTO TrackedTank [
         ]
         endPoint Solid {
           translation 0 -0.165 0
+          rotation 1 0 0 1.5708
           children [
             Shape {
               appearance PBRAppearance { baseColor 0.05 0.05 0.05 roughness 1 }
@@ -86,15 +89,15 @@ PROTO TrackedTank [
           physics Physics { density 400 }
         }
       }
-      # Лидар: корпус стоит вертикально (локальный Y → мир Z)
+      # Лидар: вращение головы вокруг локального Y → Y должен смотреть вверх (Z мира)
       Lidar {
         translation 0.05 0 0.10
-        rotation 1 0 0 1.5708
+        rotation 1 0 0 -1.5708
         name "D500"
         fieldOfView 1.5708
         horizontalResolution 512
         numberOfLayers 1
-        near 0.05
+        near 0.03
         minRange 0.03
         maxRange 12.0
         type "rotating"
@@ -102,6 +105,8 @@ PROTO TrackedTank [
         minFrequency 5
         maxFrequency 15
         rotatingHead Solid {
+          # Визуал башни: Cylinder (Z) совместить с осью спина (Y)
+          rotation 1 0 0 1.5708
           children [
             Shape {
               appearance PBRAppearance { baseColor 1 0.5 0 roughness 0.6 }
