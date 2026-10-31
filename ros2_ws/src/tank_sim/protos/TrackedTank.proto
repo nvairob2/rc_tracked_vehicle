@@ -1,10 +1,10 @@
-#VRML_SIM R2023b utf8
-# Гусеничная тележка как дифференциал + 2D Lidar (аналог D500).
-# Открывается в Webots на Mac без ROS.
+#VRML_SIM R2025a utf8
+# Гусеничная аппроксимация + Lidar D500.
+# ENU: X вперёд, Y влево, Z вверх (Webots R2025a).
 
 PROTO TrackedTank [
-  field SFVec3f    translation  0 0.06 0
-  field SFRotation rotation     0 1 0 0
+  field SFVec3f    translation  0 0 0.05
+  field SFRotation rotation     0 0 1 0
   field SFString   name         "tracked_tank"
   field SFString   controller   "<extern>"
   field SFBool     supervisor   FALSE
@@ -17,7 +17,7 @@ PROTO TrackedTank [
     controller IS controller
     supervisor IS supervisor
     children [
-      # Корпус
+      # Корпус: длина X, ширина Y, высота Z
       Shape {
         appearance PBRAppearance {
           baseColor 0.3 0.3 0.35
@@ -25,14 +25,14 @@ PROTO TrackedTank [
           metalness 0.1
         }
         geometry Box {
-          size 0.40 0.12 0.28
+          size 0.40 0.28 0.12
         }
       }
-      # Левое «колесо» (модель гусеницы)
+      # Левое колесо: Cylinder по Y = ось колеса (влево)
       HingeJoint {
         jointParameters HingeJointParameters {
-          axis 0 0 1
-          anchor 0 -0.03 0.165
+          axis 0 1 0
+          anchor 0 0.165 0
         }
         device [
           RotationalMotor {
@@ -45,7 +45,7 @@ PROTO TrackedTank [
           }
         ]
         endPoint Solid {
-          translation 0 -0.03 0.165
+          translation 0 0.165 0
           children [
             Shape {
               appearance PBRAppearance { baseColor 0.05 0.05 0.05 roughness 1 }
@@ -57,10 +57,11 @@ PROTO TrackedTank [
           physics Physics { density 400 }
         }
       }
+      # Правое колесо
       HingeJoint {
         jointParameters HingeJointParameters {
-          axis 0 0 1
-          anchor 0 -0.03 -0.165
+          axis 0 1 0
+          anchor 0 -0.165 0
         }
         device [
           RotationalMotor {
@@ -73,7 +74,7 @@ PROTO TrackedTank [
           }
         ]
         endPoint Solid {
-          translation 0 -0.03 -0.165
+          translation 0 -0.165 0
           children [
             Shape {
               appearance PBRAppearance { baseColor 0.05 0.05 0.05 roughness 1 }
@@ -85,20 +86,34 @@ PROTO TrackedTank [
           physics Physics { density 400 }
         }
       }
-      # Лидар на крыше (поле зрения как у D500)
+      # Лидар: корпус стоит вертикально (локальный Y → мир Z)
       Lidar {
-        translation 0.05 0.10 0
+        translation 0.05 0 0.10
+        rotation 1 0 0 1.5708
         name "D500"
-        fieldOfView 6.28318
-        horizontalResolution 500
+        fieldOfView 1.5708
+        horizontalResolution 512
         numberOfLayers 1
         near 0.05
         minRange 0.03
         maxRange 12.0
-        rotatingHead TRUE
+        type "rotating"
+        defaultFrequency 10
+        minFrequency 5
+        maxFrequency 15
+        rotatingHead Solid {
+          children [
+            Shape {
+              appearance PBRAppearance { baseColor 1 0.5 0 roughness 0.6 }
+              geometry Cylinder { height 0.04 radius 0.025 }
+            }
+          ]
+          name "d500_head"
+          boundingObject Cylinder { height 0.04 radius 0.025 }
+        }
       }
     ]
-    boundingObject Box { size 0.40 0.12 0.28 }
+    boundingObject Box { size 0.40 0.28 0.12 }
     physics Physics {
       density -1
       mass 10

@@ -1,6 +1,9 @@
-#VRML_SIM R2023b utf8
-# Комната для отладки навигации. File → Open в Webots (Mac/Linux).
+#VRML_SIM R2025a utf8
+# Комната для Nav2. ENU: Z вверх. File → Open в Webots.
 
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/81b36aeabdb5c16306e4b7c4cede416158c41d4d/projects/objects/backgrounds/protos/TexturedBackground.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/81b36aeabdb5c16306e4b7c4cede416158c41d4d/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/81b36aeabdb5c16306e4b7c4cede416158c41d4d/projects/objects/floors/protos/RectangleArena.proto"
 EXTERNPROTO "../protos/TrackedTank.proto"
 
 WorldInfo {
@@ -9,41 +12,44 @@ WorldInfo {
   coordinateSystem "ENU"
 }
 Viewpoint {
-  orientation -0.5 0.5 0.5 1.9
-  position -3.5 2.8 3.5
+  orientation 0 5 0 1
+  position -10 0 12
 }
-TexturedBackground { }
-TexturedBackgroundLight { }
+TexturedBackground {
+}
+TexturedBackgroundLight {
+}
 RectangleArena {
   floorSize 8 8
   floorTileSize 0.5 0.5
   wallHeight 0.4
 }
-# Внутренние препятствия
+# Препятствия: translation.z = половина высоты (стоят на полу z=0)
 Solid {
-  translation 1.5 0.2 0.5
+  translation 1.5 0.5 0.2
   children [
     Shape {
       appearance PBRAppearance { baseColor 0.7 0.4 0.2 roughness 0.8 }
-      geometry Box { size 0.4 0.4 0.8 }
+      geometry Box { size 0.4 0.8 0.4 }
     }
   ]
   name "box1"
-  boundingObject Box { size 0.4 0.4 0.8 }
+  boundingObject Box { size 0.4 0.8 0.4 }
 }
 Solid {
-  translation -1.2 0.2 -1.0
+  translation -1.2 -1.0 0.2
   children [
     Shape {
       appearance PBRAppearance { baseColor 0.2 0.5 0.7 roughness 0.8 }
-      geometry Box { size 0.5 0.4 1.0 }
+      geometry Box { size 0.5 1.0 0.4 }
     }
   ]
   name "box2"
-  boundingObject Box { size 0.5 0.4 1.0 }
+  boundingObject Box { size 0.5 1.0 0.4 }
 }
 Solid {
-  translation 0.5 0.25 -2.0
+  translation 0.5 -2.0 0.25
+  rotation 1 0 0 1.5708
   children [
     Shape {
       appearance PBRAppearance { baseColor 0.5 0.5 0.5 roughness 0.9 }
@@ -54,5 +60,5 @@ Solid {
   boundingObject Cylinder { height 0.5 radius 0.25 }
 }
 TrackedTank {
-  translation 0 0.06 0
+  translation 0 0 0.05
 }

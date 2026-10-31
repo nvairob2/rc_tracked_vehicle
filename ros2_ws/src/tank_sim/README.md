@@ -2,12 +2,14 @@
 
 ## Только визуализация (Mac)
 
-1. Установить [Webots](https://cyberbotics.com/) (есть сборка для Apple Silicon).
+1. Установить [Webots](https://cyberbotics.com/) **R2025a** (или новее; мир объявлен как R2025a).
 2. File → Open →  
-   `ros2_ws/src/tank_sim/worlds/tank_room.wbt`
-3. В мире: комната 8×8 м, препятствия, PROTO `TrackedTank` с лидаром «D500».
+   `ros2_ws/src/tank_sim/worlds/tank_room.wbt`  
+   При первом открытии Webots скачает PROTO фона/арены с GitHub (нужен интернет).
+3. В мире: комната 8×8 м, препятствия, PROTO `TrackedTank` с лидаром «D500».  
+   Координаты **ENU** (Z вверх) — как в Webots R2025a.
 
-Контроллер `<extern>` — для ROS2. Без ROS робот стоит; скан лидара в Webots виден через View → Optional Rendering → Show Lidar Point Cloud (если доступно) или окно Lidar.
+Контроллер `<extern>` — для ROS2. Без ROS робот стоит. Скан: окно робота → D500 → Enable, либо View → Optional Rendering → Show Lidar Rays / Point Cloud.
 
 ## ROS2 + Webots (opi5 / Ubuntu Humble)
 
