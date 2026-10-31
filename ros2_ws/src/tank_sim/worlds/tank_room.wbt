@@ -1,0 +1,58 @@
+#VRML_SIM R2023b utf8
+# Комната для отладки навигации. File → Open в Webots (Mac/Linux).
+
+EXTERNPROTO "../protos/TrackedTank.proto"
+
+WorldInfo {
+  title "Tank room — stage 2 Nav2"
+  basicTimeStep 16
+  coordinateSystem "ENU"
+}
+Viewpoint {
+  orientation -0.5 0.5 0.5 1.9
+  position -3.5 2.8 3.5
+}
+TexturedBackground { }
+TexturedBackgroundLight { }
+RectangleArena {
+  floorSize 8 8
+  floorTileSize 0.5 0.5
+  wallHeight 0.4
+}
+# Внутренние препятствия
+Solid {
+  translation 1.5 0.2 0.5
+  children [
+    Shape {
+      appearance PBRAppearance { baseColor 0.7 0.4 0.2 roughness 0.8 }
+      geometry Box { size 0.4 0.4 0.8 }
+    }
+  ]
+  name "box1"
+  boundingObject Box { size 0.4 0.4 0.8 }
+}
+Solid {
+  translation -1.2 0.2 -1.0
+  children [
+    Shape {
+      appearance PBRAppearance { baseColor 0.2 0.5 0.7 roughness 0.8 }
+      geometry Box { size 0.5 0.4 1.0 }
+    }
+  ]
+  name "box2"
+  boundingObject Box { size 0.5 0.4 1.0 }
+}
+Solid {
+  translation 0.5 0.25 -2.0
+  children [
+    Shape {
+      appearance PBRAppearance { baseColor 0.5 0.5 0.5 roughness 0.9 }
+      geometry Cylinder { height 0.5 radius 0.25 }
+    }
+  ]
+  name "pillar"
+  boundingObject Cylinder { height 0.5 radius 0.25 }
+}
+TrackedTank {
+  translation 0 0.06 0
+}

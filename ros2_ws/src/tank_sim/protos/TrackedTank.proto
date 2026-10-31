@@ -1,0 +1,107 @@
+#VRML_SIM R2023b utf8
+# Гусеничная тележка как дифференциал + 2D Lidar (аналог D500).
+# Открывается в Webots на Mac без ROS.
+
+PROTO TrackedTank [
+  field SFVec3f    translation  0 0.06 0
+  field SFRotation rotation     0 1 0 0
+  field SFString   name         "tracked_tank"
+  field SFString   controller   "<extern>"
+  field SFBool     supervisor   FALSE
+]
+{
+  Robot {
+    translation IS translation
+    rotation IS rotation
+    name IS name
+    controller IS controller
+    supervisor IS supervisor
+    children [
+      # Корпус
+      Shape {
+        appearance PBRAppearance {
+          baseColor 0.3 0.3 0.35
+          roughness 0.7
+          metalness 0.1
+        }
+        geometry Box {
+          size 0.40 0.12 0.28
+        }
+      }
+      # Левое «колесо» (модель гусеницы)
+      HingeJoint {
+        jointParameters HingeJointParameters {
+          axis 0 0 1
+          anchor 0 -0.03 0.165
+        }
+        device [
+          RotationalMotor {
+            name "left_motor"
+            maxVelocity 12
+            maxTorque 5
+          }
+          PositionSensor {
+            name "left_sensor"
+          }
+        ]
+        endPoint Solid {
+          translation 0 -0.03 0.165
+          children [
+            Shape {
+              appearance PBRAppearance { baseColor 0.05 0.05 0.05 roughness 1 }
+              geometry Cylinder { height 0.05 radius 0.05 }
+            }
+          ]
+          name "left_wheel"
+          boundingObject Cylinder { height 0.05 radius 0.05 }
+          physics Physics { density 400 }
+        }
+      }
+      HingeJoint {
+        jointParameters HingeJointParameters {
+          axis 0 0 1
+          anchor 0 -0.03 -0.165
+        }
+        device [
+          RotationalMotor {
+            name "right_motor"
+            maxVelocity 12
+            maxTorque 5
+          }
+          PositionSensor {
+            name "right_sensor"
+          }
+        ]
+        endPoint Solid {
+          translation 0 -0.03 -0.165
+          children [
+            Shape {
+              appearance PBRAppearance { baseColor 0.05 0.05 0.05 roughness 1 }
+              geometry Cylinder { height 0.05 radius 0.05 }
+            }
+          ]
+          name "right_wheel"
+          boundingObject Cylinder { height 0.05 radius 0.05 }
+          physics Physics { density 400 }
+        }
+      }
+      # Лидар на крыше (поле зрения как у D500)
+      Lidar {
+        translation 0.05 0.10 0
+        name "D500"
+        fieldOfView 6.28318
+        horizontalResolution 500
+        numberOfLayers 1
+        near 0.05
+        minRange 0.03
+        maxRange 12.0
+        rotatingHead TRUE
+      }
+    ]
+    boundingObject Box { size 0.40 0.12 0.28 }
+    physics Physics {
+      density -1
+      mass 10
+    }
+  }
+}

@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>tank_sim</name>
+  <version>1.0.0</version>
+  <description>Webots: гусеничная аппроксимация + лидар, комната для Nav2.</description>
+  <maintainer email="nik@orangepi5ultra.local">nik</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <exec_depend>tank_description</exec_depend>
+  <exec_depend>tank_nav</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <!-- Опционально: sudo apt install ros-humble-webots-ros2 -->
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

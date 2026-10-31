@@ -1,7 +1,7 @@
 # ROS2 workspace (этап 1)
 
-Пакеты: `tank_teleop`, `tank_bringup`.  
-Архитектура, две сети, agent, карта Joy: **`schema/ros2_stage1.md`**.
+Пакеты этапа 1: `tank_teleop`, `tank_bringup` — **`schema/ros2_stage1.md`**.  
+Пакеты этапа 2: `tank_description`, `tank_nav`, `tank_sim`, `ldlidar_*` — **`schema/ros2_stage2.md`**.
 
 Путь на opi5: `~/WORK/Projects/rc_tracked_vehicle/ros2_ws/`.  
 Humble: `/opt/ros/humble`.
@@ -69,3 +69,30 @@ python3 -m pytest test -q
 ## Foxglove
 
 Layout: `src/tank_bringup/config/foxglove.json` — `/joy`, `/cmd_vel`, `/tank/mode`, `/tank/feedback`.
+
+## Этап 2 (лидар / SLAM / Nav2)
+
+Зависимости на opi5:
+
+```bash
+sudo apt install libudev-dev \
+  ros-humble-slam-toolbox ros-humble-navigation2 ros-humble-nav2-bringup \
+  ros-humble-robot-state-publisher ros-humble-xacro ros-humble-tf2-ros
+# лидар: пакеты из symlink lib/ldrobot_d500 → src/ldlidar*
+```
+
+```bash
+./scripts/sync_opi5.sh
+# порт: ls /dev/serial/by-id/
+ros2 launch tank_nav lidar.launch.py
+# топик драйвера (не /scan):
+ros2 topic hz /ldlidar_node/scan
+ros2 topic echo /ldlidar_node/scan --once
+
+ros2 launch tank_nav slam.launch.py
+# сохранить карту: ros2 run nav2_map_server map_saver_cli -f ~/maps/room
+
+ros2 launch tank_nav nav.launch.py map:=$HOME/maps/room.yaml
+```
+
+Webots (мир на Mac): `src/tank_sim/worlds/tank_room.wbt` — см. `src/tank_sim/README.md`.

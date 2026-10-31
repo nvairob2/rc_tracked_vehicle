@@ -1,0 +1,7 @@
+lifecycle_manager:
+  ros__parameters:
+    autostart: true
+    node_names: ['ldlidar_node']
+    # 0 = без bond: ldlidar не шлёт heartbeat Nav2 lifecycle
+    bond_timeout: 0.0
+    attempt_respawn_reconnection: true

@@ -40,8 +40,8 @@ Always consider the following hardware configuration when writing code, allocati
 You must tailor your current development tasks to the active migration stage designated by the Project Manager:
 
 1. **Stage 1: Gamepad Control via ROS2:** Establish teleoperation where the gamepad receiver remains connected to the `ESP32-S3`. The `ESP32-S3` reads inputs, forwards them to `opi5` via ROS2 topics (e.g., using `micro-ROS` or a serial bridge), and `opi5` processes them to send motor commands to the `STM32` controller.
-2. **Stage 2: Object & Obstacle Detection (Auto-Stop):** Implement computer vision using the `Orbbec Astra S` camera. Select and convert pre-trained neural networks (prioritizing lightweight models like **YOLOv8-nano** or **MobileNet-SSD**) into the `.rknn` format using **Rockchip RKNN-Toolkit2** to leverage the `opi5` NPU. Implement emergency auto-stop logic when obstacles are detected.
-3. **Stage 3: Autonomous Navigation & Object Search:** Enable the robot to autonomously navigate a room to find targets using the camera. Integrate the `LDROBOT D500` LiDAR and `HY-SRF05` ultrasonic sensors (once available) into the ROS2 navigation stack (Nav2) for mapping, localization, and robust collision avoidance.
+2. **Stage 2: Autonomous Navigation & Object Search:** Enable the robot to autonomously navigate a room to find targets using the camera. Integrate the `LDROBOT D500` LiDAR and `HY-SRF05` ultrasonic sensors (once available) into the ROS2 navigation stack (Nav2) for mapping, localization, and robust collision avoidance.
+3. **Stage 3: Object & Obstacle Detection (Auto-Stop):** Implement computer vision using the `Orbbec Astra S` camera. Select and convert pre-trained neural networks (prioritizing lightweight models like **YOLOv8-nano** or **MobileNet-SSD**) into the `.rknn` format using **Rockchip RKNN-Toolkit2** to leverage the `opi5` NPU. Implement emergency auto-stop logic when obstacles are detected.
 
 # Technology Stack & Code Requirements
 

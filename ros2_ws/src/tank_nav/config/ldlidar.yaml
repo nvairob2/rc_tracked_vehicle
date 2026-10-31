@@ -1,0 +1,19 @@
+# Параметры D500 (STL-19P) на USB CP2102 для нашей URDF.
+/**:
+  ros__parameters:
+    general:
+      debug_mode: false
+
+    comm:
+      # false = USB↔UART (CP2102), порт ищет udev
+      direct_serial: false
+      serial_port: ""
+
+    lidar:
+      frame_id: "ldlidar_link"
+      rot_verse: 1
+      units: 2
+      qos_history: 1
+      qos_depth: 1
+      qos_reliability: 1
+      qos_durability: 2

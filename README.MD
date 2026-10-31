@@ -10,6 +10,15 @@
 - Пакеты: `ros2_ws/` (`tank_teleop`, `tank_bringup`)
 - Решение: `history/2026-10-11-ros2-stage1.md`
 
+## ROS2 этап 2
+
+Лидар D500 (USB→opi5), SLAM, Nav2, симуляция Webots.
+
+- Схема: `schema/ros2_stage2.md`
+- Пакеты: `tank_description`, `tank_nav`, `tank_sim` (+ symlink `ldlidar_*`)
+- Webots мир: `ros2_ws/src/tank_sim/worlds/tank_room.wbt`
+- Решение: `history/2026-10-31-ros2-stage2-nav-webots.md`
+
 ## Hardware
 
 ### Vehicle
